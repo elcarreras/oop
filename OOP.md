@@ -935,3 +935,128 @@ try {
         Console.WriteLine($"Ошибка: {ex.Message}");
 }
 ```
+
+
+## 11. Обобщенные типы данных. Наследование обобщенных типов данных. Ограничения, накладываемые на использование типов данных в обобщенных типах данных. Отличия от boxing/unboxing
+
+### Обобщенные типы данных (Generics)
+
+**Обобщенные типы** — это шаблоны, позволяющие создавать классы, интерфейсы и методы с параметром типа , который определяется при использовании.
+
+**Преимущества:**
+* Типобезопасность : ошибки выявляются на этапе компиляции.
+* Производительность : избегается упаковка/распаковка (boxing/unboxing).
+* Гибкость : один код работает с разными типами.
+
+**Пример:**
+```C#
+public class Box<T> {
+    private T _value;
+    public void Set(T value) => _value = value;
+    public T Get() => _value;
+}
+
+// Использование:
+Box<int> intBox = new Box<int>();
+intBox.Set(42);
+int number = intBox.Get(); // Без cast
+```
+
+### Наследование обобщенных типов
+Обобщенные типы могут наследовать как от обобщенных, так и от необобщенных классов/интерфейсов.
+
+**Правила наследования:**
+* Обобщенный класс → обобщенный класс:
+    ```C#
+    public class Base<T> { /* ... */ }
+    public class Derived<T> : Base<T> { /* ... */ }
+    ```
+* Обобщенный класс → конкретный класс:
+    ```C#
+    public class Derived : Base<string> { /* ... */ } // Base фиксируется к string
+    ```
+* Конкретный класс → обобщенный класс:
+    ```C#
+    public class Base { /* ... */ }
+    public class Derived<T> : Base { /* ... */ }
+    ```
+
+**Пример наследования с параметрами:**
+```C#
+public class Animal { /* Базовый класс */ }
+public class Cat : Animal { /* Наследник */ }
+
+public class Cage<T> where T : Animal {
+    public T CurrentAnimal { get; set; }
+}
+
+public class CatCage : Cage<Cat> {
+    // Может работать только с Cat
+}
+```
+
+### Ограничения на типы в обобщениях
+Ограничения (`constraints`) задают правила для параметров типа, чтобы гарантировать доступность методов, свойств или поведения.
+
+**Типы ограничений:**
+|Ограничение|Описание|
+|---|---|
+|`where T : class`|T должен быть ссылочным типом (класс, интерфейс, делегат).|
+|`where T : struct`|T должен быть значимым типом `int`, `DateTime`, собственные `struct`.|
+|`where T : new()`|T должен иметь конструктор без параметров.|
+|`where T : <base class>`|T должен наследовать указанный базовый класс. |
+|`where T : <interface>`|T должен реализовать указанный интерфейс.|
+|`where T : U`|T должен быть или наследовать тип U.|
+
+
+**Примеры использования:**
+```C#
+public class Repository<T> where T : class, IEntity, new() {
+    public T Create() {
+        T item = new T(); // new() позволяет создать экземпляр
+        return item;
+    }
+}
+```
+
+**Комбинация ограничений:**
+```C#
+public class Processor<T> where T : class, IComparable<T>, new() {
+    // T должен быть ссылочным типом, реализовать IComparable<T> и иметь конструктор
+}
+```
+
+
+### Отличие от boxing/unboxing
+**Boxing/unboxing** — это процесс упаковки и распаковки значимых типов (`int`, `bool`, `DateTime`) в/из ссылочного типа `object`.
+
+**Boxing (упаковка):**
+```C#
+int number = 42;
+object obj = number; // Boxing: int → object
+```
+
+**Unboxing (распаковка):**
+```C#
+object obj = 42;
+int number = (int)obj; // Unboxing: object → int
+```
+
+**Проблемы boxing/unboxing:**
+* Производительность : дополнительные операции копирования.
+* Ошибка времени выполнения : если тип не совпадает.
+
+**Как обобщения решают эти проблемы?**
+* Обобщения работают с конкретными типами , избегая преобразования в object.
+* Пример:
+```C#
+// С использованием object (boxing/unboxing)
+List<object> list = new List<object>();
+list.Add(1); // Boxing
+int number = (int)list[0]; // Unboxing
+
+// С обобщением
+List<int> list = new List<int>();
+list.Add(1); // Без boxing
+int number = list[0]; // Без cast
+```
