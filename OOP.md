@@ -394,3 +394,17 @@ class Dog : Animal
   * Устранения неоднозначности (если параметр метода совпадает с полем).
   * Вызова другого конструктора в том же классе (`this()`).
 
+```C#
+class Person 
+{
+    private string _name;
+    
+    public Person() : this("Unknown") { }  // Вызов другого конструктора
+    
+    public Person(string name) 
+    {
+        _name = name;  // Можно без this, но так понятнее:
+        this._name = name;
+    }
+}
+```
