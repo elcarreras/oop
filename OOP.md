@@ -72,25 +72,32 @@ dog.Bark(); // Свой метод
 ```
 2) **Агрегация** - Объект содержит другой объект, но они могут существовать независимо.
 ```C#
-public class Student {
-    public string Name { get; set; }
+public class Engine { }  // Двигатель может быть без машины
+
+public class Car {
+    private Engine _engine;
+    
+    // Двигатель передается извне
+    public Car(Engine engine) {
+        _engine = engine;
+    }
 }
 
-public class University {
-    public List<Student> Students { get; set; }  // Агрегация
-}
+var engine = new Engine();
+var car = new Car(engine);  // Машина использует существующий двигатель
 ```
 3) **Композиция** - Объект владеет другим объектом, и зависимый объект не существует без основного.
 ```C#
-public class Room {
-    public string Type { get; set; }
-}
+public class Heart { }  // Сердце не существует без тела
 
-public class House {
-    public List<Room> Rooms { get; } = new List<Room>();  // Композиция
+public class Human {
+    private Heart _heart;
     
-    public House() {
-        Rooms.Add(new Room { Type = "Bedroom" });  // Комната создается внутри дома
+    // Сердце создается при создании человека
+    public Human() {
+        _heart = new Heart();  // Композиция
     }
 }
+
+var human = new Human();  // Сердце создается автоматически
 ```
