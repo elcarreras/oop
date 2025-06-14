@@ -210,12 +210,59 @@ int d = (int)c;  // double → int (дробная часть отбрасыва
 ```
 
 **Приведение ссылочных типов**
+* Upcasting (Восходящее приведение) - преобразование производного класса к базовому (например, `Dog` → `Animal`).
+  *  ✅ Безопасное (компилятор всегда разрешает).
+  *  ✅ Не требует явного приведения (можно без (тип)).
+  *  ✅ Происходит автоматически при присваивании.
+
 ```C#
-Upcasting (восходящее, безопасное):
+class Animal { }
+class Dog : Animal { }
 
-Downcasting (нисходящее, требует проверки):
-
+Dog dog = new Dog();
+Animal animal = dog;  // Upcasting (Dog → Animal)
 ```
+
+* Downcasting (Нисходящее приведение) - преобразование базового класса к производному (например, Animal → Dog).
+  * ⚠ Опасное (может вызвать `InvalidCastException`)
+  * ⚠ Требует явного приведения (нужен оператор `(тип)`)
+  * ⚠ Требует проверки (через `is`, `as` или `pattern matching`).
+  
+```C#
+// Опасный способ
+Animal animal = new Dog();
+Dog dog = (Dog)animal;  // Явное приведение (работает, т.к. animal на самом деле Dog)
+
+// Ошибка (InvalidCastException)
+Animal animal = new Animal();
+Dog dog = (Dog)animal;  // Ошибка! animal не является Dog
+```
+
+```C#
+// Безопасные способы Downcasting
+// Оператор is (проверка типа)
+if (animal is Dog) 
+{
+    Dog dog = (Dog)animal;
+    // или через pattern matching:
+    if (animal is Dog dog) { ... }
+}
+
+// Оператор as (приведение с null)
+Dog dog = animal as Dog;  // Если не получится — вернет null
+if (dog != null) 
+{
+    // Приведение успешно
+}
+
+// Pattern Matching (C# 7.0+)
+if (animal is Dog dog) 
+{
+    // dog уже приведен к типу Dog
+    dog.Bark();
+}
+```
+
 
 ### Nullable-типы
 **Nullable-типы** позволяют значимым типам (value types) принимать значение `null`, что невозможно в обычных условиях
