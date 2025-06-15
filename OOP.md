@@ -2075,3 +2075,141 @@ async Task<int> AddAsync(int a, int b)
 
 
 ## 23. LINQ. Основные операторы. Запросный и метод-синтаксис, примеры реализации фильтрации и сортировки коллекции объектов по нескольким критериям. 
+
+### LINQ
+
+**LINQ (Language Integrated Query)** — это механизм интеграции SQL-подобных запросов в язык C#, позволяющий работать с коллекциями, базами данных, XML и другими источниками данных. Основная цель LINQ — упростить работу с данными, делая код более декларативным и читаемым.
+
+Синтаксис LINQ поддерживает два стиля записи:
+
+1) Запросный синтаксис (Query Syntax) — похож на SQL.
+2) Метод-синтаксис (Method Syntax) — использование методов расширений.
+
+Оба стиля компилируются в один и тот же IL-код.
+
+Основные операторы LINQ
+* `Where` — фильтрация элементов по условию.
+* `Select` — проекция (преобразование) элементов.
+* `OrderBy` / `OrderByDescending` — сортировка по возрастанию/убыванию.
+* `ThenBy` / `ThenByDescending` — дополнительная сортировка после `OrderBy`.
+* `GroupBy` — группировка элементов по ключу.
+* `Join` — объединение коллекций по ключу.
+* `Distinct` — удаление дубликатов.
+* `Skip` / `Take` — пагинация (пропуск элементов, взятие подмножества).
+* `Any` / `All` — проверка условий для элементов.
+* `Aggregate` — кастомная агрегация (например, сумма, произведение).
+
+### Когда использовать Query vs Method Syntax?
+
+* **Query Syntax**
+  
+  Подходит для сложных запросов (например, с `join`, `group by`, `let`).
+    ```C#
+    var query = from p in products
+                join c in categories on p.Category equals c.Name
+                select new { p.Name, c.Description };
+    ```
+* **Method Syntax**
+  
+  Гибче для динамических условий и агрегации
+
+    ```C#
+    var total = products.Sum(p => p.Price);
+    ```
+
+**Отложенные вычисления:** LINQ-запросы выполняются только при итерации (например, в foreach или ToList()).
+
+
+### Огромный пример хз че куда, сами
+```C#
+using System;
+using System.Collections.Generic;
+using System.Linq;
+
+public class Product
+{
+    public string Name { get; set; }
+    public decimal Price { get; set; }
+    public string Category { get; set; }
+
+    public override string ToString() => $"{Name} ({Category}): {Price:C}";
+}
+
+public class Program
+{
+    public static void Main()
+    {
+        // Инициализация коллекции
+        var products = new List<Product>
+        {
+            new Product { Name = "Apple", Price = 10, Category = "Fruits" },
+            new Product { Name = "Banana", Price = 5, Category = "Fruits" },
+            new Product { Name = "Carrot", Price = 3, Category = "Vegetables" },
+            new Product { Name = "Broccoli", Price = 4, Category = "Vegetables" },
+            new Product { Name = "Mango", Price = 15, Category = "Fruits" },
+            new Product { Name = "Potato", Price = 2, Category = "Vegetables" }
+        };
+
+        // 1. Фильтрация (Where) - Все фрукты дороже 5
+        Console.WriteLine("=== Фильтрация (Where) ===");
+        var fruitsOver5 = from p in products
+                          where p.Category == "Fruits" && p.Price > 5
+                          select p;
+        PrintResults(fruitsOver5);
+
+        // 2. Сортировка (OrderBy + ThenBy) - Сначала по категории, затем по цене
+        Console.WriteLine("\n=== Сортировка (OrderBy + ThenBy) ===");
+        var sortedByCategoryAndPrice = products
+            .OrderBy(p => p.Category)
+            .ThenByDescending(p => p.Price);
+        PrintResults(sortedByCategoryAndPrice);
+
+        // 3. Группировка (GroupBy) - Группировка по категориям
+        Console.WriteLine("\n=== Группировка (GroupBy) ===");
+        var groupedByCategory = from p in products
+                                group p by p.Category into g
+                                select g;
+        foreach (var group in groupedByCategory)
+        {
+            Console.WriteLine($"Категория: {group.Key}");
+            foreach (var item in group)
+                Console.WriteLine($" - {item.Name} ({item.Price:C})");
+        }
+
+        // 4. Проекция (Select) - Получение только имен
+        Console.WriteLine("\n=== Проекция (Select) ===");
+        var productNames = products.Select(p => p.Name);
+        Console.WriteLine(string.Join(", ", productNames));
+
+        // 5. Агрегация (Aggregate) - Общая стоимость товаров
+        Console.WriteLine("\n=== Агрегация (Aggregate) ===");
+        decimal totalPrice = products.Aggregate(
+            0m, 
+            (sum, p) => sum + p.Price
+        );
+        Console.WriteLine($"Общая стоимость: {totalPrice:C}");
+
+        // 6. Проверка наличия (Any/All) - Есть ли товары дешевле 2?
+        Console.WriteLine("\n=== Проверка наличия (Any/All) ===");
+        bool hasCheapItems = products.Any(p => p.Price < 2);
+        Console.WriteLine($"Есть ли товары дешевле 2? {hasCheapItems}");
+
+        // 7. Уникальные значения (Distinct) - Уникальные категории
+        Console.WriteLine("\n=== Уникальные значения (Distinct) ===");
+        var uniqueCategories = products.Select(p => p.Category).Distinct();
+        Console.WriteLine(string.Join(", ", uniqueCategories));
+
+        // 8. Пагинация (Skip + Take) - Страница 2 с размером 2 элемента
+        Console.WriteLine("\n=== Пагинация (Skip + Take) ===");
+        var page2 = products.OrderBy(p => p.Price).Skip(2).Take(2);
+        PrintResults(page2);
+    }
+
+    // Вспомогательный метод для вывода результатов
+    private static void PrintResults(IEnumerable<Product> results)
+    {
+        foreach (var item in results)
+            Console.WriteLine(item);
+    }
+}
+```
