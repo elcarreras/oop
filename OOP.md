@@ -508,8 +508,132 @@ Console.WriteLine(Config.AppName);  // "MyApp"
 
 ## 6. Использование ThreadStatic / AsyncLocal. Взаимодействие static с потоками
 
-[[[[[[[[[ Пока пропущено ]]]]]]]]]
+### `ThreadStatic` — Хранение данных, специфичных для потока
 
+* **Описание**
+  
+  Атрибут `[ThreadStatic]` помечает статическое поле так, чтобы каждое значение было уникальным для каждого потока. Это полезно для хранения контекста, специфичного для потока (например, логирование, транзакции).
+
+* **Пример**
+    ```C#
+    public class ThreadStaticExample
+    {
+        [ThreadStatic]
+        private static int _threadValue;
+
+        public static void Run()
+        {
+            // Установка значения в основном потоке
+            _threadValue = 10;
+            Console.WriteLine($"Main thread value: {_threadValue}");
+
+            // Запуск нового потока
+            Thread thread = new Thread(() =>
+            {
+                _threadValue = 20; // Установка значения в другом потоке
+                Console.WriteLine($"New thread value: {_threadValue}");
+            });
+            thread.Start();
+            thread.Join();
+
+            // Значение в основном потоке не изменилось
+            Console.WriteLine($"Main thread value after: {_threadValue}");
+        }
+    }
+    ```
+* **Вывод**
+    ```
+    Main thread value: 10
+    New thread value: 20
+    Main thread value after: 10
+    ```
+
+* **Ограничения**
+  * Не работает с асинхронными операциями (`async/await`), так как задачи могут выполняться в разных потоках.
+  * Не подходит для пула потоков (например, при использовании `Task.Run`).
+
+### `AsyncLocal<T>` — Хранение данных в асинхронном контексте
+
+* **Описание**
+  
+  Класс `AsyncLocal<T>` сохраняет значение в контексте асинхронной цепочки вызовов, включая `async/await`. Значения передаются между потоками через механизмы контекста синхронизации (`SynchronizationContext`).
+
+* **Пример**
+    ```C#
+    public class AsyncLocalExample
+    {
+        private static AsyncLocal<int> _asyncValue = new AsyncLocal<int>();
+
+        public static async Task Run()
+        {
+            _asyncValue.Value = 100;
+            Console.WriteLine($"Initial value: {_asyncValue.Value}");
+
+            await Task.Run(() =>
+            {
+                // Значение сохраняется в асинхронной задаче
+                Console.WriteLine($"Task value: {_asyncValue.Value}");
+                _asyncValue.Value = 200;
+            });
+
+            // Значение изменено в асинхронной задаче
+            Console.WriteLine($"Value after task: {_asyncValue.Value}");
+        }
+    }
+    ```
+* **Вывод**
+    ```
+    Initial value: 100
+    Task value: 100
+    Value after task: 200
+    ```
+
+* **Особенности**
+  * Подходит для асинхронных приложений (ASP.NET, WPF, WinForms).
+  * Поддерживает передачу значений через await.
+  * Может вызывать утечки памяти, если не очищать значения после использования.
+
+### Сравнение `ThreadStatic` и `AsyncLocal`
+|Хар-ка|`ThreadStatic`|`AsyncLocal<T>`|
+|---|---|---|
+|Область действия|Поток|Асинхронный контекст (включая потоки)|
+|Поддержка `async/await`|❌ Не сохраняет значение при|✅ Сохраняет значение через `await`|
+|Пул потоков|❌ Не совместим с `Task.Run`|✅ Совместим с асинхронными задачами|
+|Применение|Синхронные многопоточные приложения|Асинхронные приложения (например, ASP.NET)|
+
+### Static-поля и потоки
+
+`static`-поля в C# общие для всех потоков , то есть они разделяются между всеми потоками внутри одного домена приложений (AppDomain). Это означает, что если один поток изменит значение `static`-переменной, это изменение будет видно во всех других потоках.
+
+* **Пример**
+    ```C#
+    public class MyClass
+    {
+        public static int Counter = 0;
+    }
+
+    // В разных потоках
+    Task.Run(() =>
+    {
+        MyClass.Counter++;
+        Console.WriteLine($"Поток 1: {MyClass.Counter}");
+    });
+
+    Task.Run(() =>
+    {
+        MyClass.Counter++;
+        Console.WriteLine($"Поток 2: {MyClass.Counter}");
+    });
+    ```
+
+* **Вывод**
+    ```
+    Поток 1: 2
+    Поток 2: 2
+    ```
+* **Проблема**
+  
+  Такой код небезопасен для потоков , так как оба потока обращаются к одному и тому же полю. Для безопасного изменения нужно использовать блокировки (`lock`) или другие механизмы синхронизации.
 
 ## 7. Использование абстрактных классов и методов. Инициализация переменных типа абстрактного класса, создание объектов абстрактного класса. Наследование абстрактных классов. Отличие от виртуальных методов и обычных методов
 
