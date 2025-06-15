@@ -1395,3 +1395,215 @@ button.OnClick(100, 200); // Выведет: "Клик по координата
 |Контроль вызова|Полный контроль (можно вызвать напрямую)|Ограниченный (вызов через методы класса)|
 |Пример использования|Callback-функции, LINQ, асинхронность|Обработка кликов, уведомления, события UI|
 
+## 15. Многопоточное программирование. Понятие «поток», отличия от Task. Использование класса Thread. Делегаты ThreadStart и ParametrizedThreadStart. Запуск потока на выполнение. Примеры. Понятие CPU Bound, отличия от I\O Bound. Примеры операций CPU Bound. Пул потоков
+
+### Понятие «поток», отличия от Task.
+
+**Поток (Thread)** — это минимальная единица выполнения в процессе, которая может работать независимо от других потоков.
+
+**Особенности:**
+* Каждый процесс имеет минимум один поток (главный).
+* Потоки разделяют память процесса.
+* Управление потоками — задача ОС и .NET Runtime.
+
+**Класс `Thread` в .NET:**
+
+```C#
+Thread thread = new Thread(() => {
+    Console.WriteLine("Выполняется в отдельном потоке");
+});
+thread.Start();
+```
+
+**Task (задача)** — это абстракция асинхронной операции в .NET, которая упрощает работу с многопоточностью, параллелизмом и асинхронными операциями. Он является частью TPL (Task Parallel Library) — библиотеки параллельных задач, введенной в .NET 4.0.
+
+**К чему относится Task?**
+* Многопоточность (Multithreading):
+  * `Task` может выполнять код в отдельном потоке из пула потоков (`ThreadPool`).
+  * Используется для **CPU-bound** операций (например, вычисления, обработка данных).
+* Асинхронность (Asynchronous programming):
+  * `Task` работает с ключевыми словами `async/await` для асинхронного программирования.
+  * Используется для **I/O-bound** операций (например, чтение файла, HTTP-запросы, работа с базой данных).
+* Параллелизм (Parallelism):
+  * Позволяет выполнять несколько задач одновременно (например, через `Task.Run`, `Task.WhenAll`).
+
+### Чем `Task` отличается от `Thread`?
+
+|Критерий|`Thread`|`Task`|
+|---|---|---|
+|Уровень абстракции|Низкий уровень (работа напрямую с ОС)|Высокий уровень (TPL, async/await)|
+|Управление|Ручное создание и управление|Автоматическое (через пул потоков)|
+|Производительность|Накладные расходы на создание|Оптимизация через `ThreadPool`|
+|Асинхронность|Требует ручной реализации|Встроенная поддержка (`async/await`)|
+
+### Использование класса `Thread`
+Для создания потока применяется один из конструкторов класса **Thread**:
+
+**Thread(ThreadStart)**: в качестве параметра принимает объект делегата ThreadStart, который представляет выполняемое в потоке действие
+
+**Thread(ThreadStart, Int32)**: в дополнение к делегату ThreadStart принимает числовое значение, которое устанавливает размер стека, выделяемого под данный поток
+
+**Thread(ParameterizedThreadStart)**: в качестве параметра принимает объект делегата ParameterizedThreadStart, который представляет выполняемое в потоке действие
+
+**Thread(ParameterizedThreadStart, Int32)**: вместе с делегатом ParameterizedThreadStart принимает числовое значение, которое устанавливает размер стека для данного потока
+
+**Изпользование ThreadStart**
+```C#
+using System;
+using System.Threading;
+
+class Program
+{
+    static void Main()
+    {
+        // Создаем поток, передавая метод DoWork через делегат ThreadStart
+        Thread thread = new Thread(DoWork);
+        thread.Start(); // Запускаем поток
+    }
+
+    // Метод, который будет выполняться в отдельном потоке
+    static void DoWork()
+    {
+        for (int i = 0; i < 5; i++)
+        {
+            Console.WriteLine($"Поток {Thread.CurrentThread.ManagedThreadId}: {i}");
+            Thread.Sleep(100); // Имитация работы
+        }
+    }
+}
+```
+
+**Изпользование ParameterizedThreadStart**
+```C#
+using System;
+using System.Threading;
+
+class Program
+{
+    static void Main()
+    {
+        // Передаем параметр через Start()
+        Thread thread = new Thread(ProcessData);
+        thread.Start("Hello from thread!"); // Передаем строку как параметр
+    }
+
+    // Метод, принимающий параметр типа object
+    static void ProcessData(object data)
+    {
+        string message = data as string;
+        Console.WriteLine($"Получено сообщение: {message}");
+    }
+}
+```
+
+### Использование класса `Task`
+
+Если вы используете `Task.Run()` или `Task.Factory.StartNew()` , задача будет выполняться в отдельном потоке из пула потоков (`ThreadPool`). Это подходит для **вычислений на процессоре** (например, сортировка массива, математические операции).
+
+Если вы используете асинхронные методы (например, `HttpClient.GetStringAsync`, `FileStream.ReadAsync`), задача не занимает поток во время ожидания. Это подходит д**ля операций ввода-вывода** (например, чтение файла, HTTP-запрос, работа с базой данных).
+
+
+**СPU-Bound задача:**
+```C#
+using System;
+using System.Threading.Tasks;
+
+class Program
+{
+    static void Main()
+    {
+        // Создаем задачу для вычисления факториала
+        Task<int> task = Task.Run(CalculateFactorial);
+
+        // Блокируем основной поток до завершения задачи
+        task.Wait();
+        // чтобы не блокировать поток стоит использовать следующую конструкцию
+        // int result = await task;
+
+        // Получаем результат после завершения задачи
+        Console.WriteLine($"Факториал: {task.Result}");
+    }
+
+    // Метод для вычисления факториала
+    static int CalculateFactorial()
+    {
+        int result = 1;
+        for (int i = 1; i <= 5; i++)
+        {
+            result *= i;
+        }
+        return result;
+    }
+}
+```
+
+**I/O-bound**
+```C#
+using System;
+using System.Net.Http;
+using System.Threading.Tasks;
+
+class Program
+{
+    static void Main()
+    {
+        // Создаем задачу для загрузки данных
+        Task<string> task = DownloadPageAsync("https://example.com"); 
+
+        // Блокируем основной поток до завершения задачи
+        task.Wait();
+
+        // Выводим первые 100 символов
+        Console.WriteLine(task.Result.Substring(0, 100));
+    }
+
+    // Асинхронный метод для загрузки страницы
+    static async Task<string> DownloadPageAsync(string url)
+    {
+        HttpClient client = new HttpClient();
+        return await client.GetStringAsync(url);
+    }
+}
+```
+
+**Паралельный запуск задач**
+```C#
+using System;
+using System.Threading.Tasks;
+
+class Program
+{
+    static void Main()
+    {
+        Task<int> task1 = Task.Run(() => CalculateSum(1, 5));
+        Task<int> task2 = Task.Run(() => CalculateSum(6, 10));
+
+        // Блокируем до завершения всех задач
+        Task.WaitAll(task1, task2);
+
+        Console.WriteLine($"Сумма 1-5: {task1.Result}");
+        Console.WriteLine($"Сумма 6-10: {task2.Result}");
+    }
+
+    // Метод для вычисления суммы
+    static int CalculateSum(int start, int end)
+    {
+        int sum = 0;
+        for (int i = start; i <= end; i++)
+        {
+            sum += i;
+        }
+        return sum;
+    }
+}
+```
+
+### CPU Bound vs I/O Bound
+
+**CPU Bound** — операции, зависящие от мощности процессора.
+  * Математические вычисления (например, факториал, сортировка массива).
+  * Обработка изображений/видео.
+
+**I/O Bound** — операции, зависящие от внешних ресурсов (сети, диска).
+  * Чтение/запись файлов.
+  * HTTP-запросы.
